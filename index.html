@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Club Stats</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #121214;
+            --bg-card: #18181b;
+            --bg-card-hover: #1f1f23;
+            --border: #27272a;
+            --border-subtle: #1e1e21;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-gold: #d4a853;
+            --accent-gold-dim: #b8943f;
+            --profit: #22c55e;
+            --profit-bg: rgba(34, 197, 94, 0.1);
+            --loss: #ef4444;
+            --loss-bg: rgba(239, 68, 68, 0.1);
+            --neutral: #a1a1aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 1000;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            padding: 60px 0 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 48px 0 40px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .tab:hover {
+            background: var(--bg-card);
+            border-color: var(--border);
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-primary);
+        }
+
+        /* Stats Overview Cards */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border);
+        }
+
+        .stat-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Leaderboard Section */
+        .section {
+            margin-bottom: 60px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .section-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-secondary);
+        }
+
+        th {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        th:last-child, td:last-child {
+            text-align: right;
+        }
+
+        td {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background 0.2s ease;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        .player-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #d4a853, #f5d485);
+            color: var(--bg-primary);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #9ca3af, #d1d5db);
+            color: var(--bg-primary);
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #b87333, #cd8c52);
+            color: var(--bg-primary);
+        }
+
+        .rank-other {
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+        }
+
+        .player-name {
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .money {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        .profit {
+            color: var(--profit);
+        }
+
+        .loss {
+            color: var(--loss);
+        }
+
+        .neutral {
+            color: var(--neutral);
+        }
+
+        .sessions-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .chips {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Session Cards */
+        .sessions-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .session-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .session-card:hover {
+            border-color: var(--border);
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+        }
+
+        .session-header:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .session-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .session-date {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .session-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-badge span {
+            padding: 4px 12px;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--profit);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .expand-icon {
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .session-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .session-content {
+            display: none;
+            padding: 0;
+        }
+
+        .session-card.expanded .session-content {
+            display: block;
+        }
+
+        .session-content table {
+            margin: 0;
+        }
+
+        .session-content th,
+        .session-content td {
+            padding: 14px 20px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0 60px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent-gold);
+            text-decoration: none;
+        }
+
+        /* Hide sections */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            header {
+                padding: 40px 0 30px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                margin: 32px 0 28px;
+            }
+
+            .tab {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 12px 14px;
+            }
+
+            .player-rank {
+                width: 24px;
+                height: 24px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">♠</div>
+            </div>
+            <h1>Poker Club</h1>
+            <p class="subtitle">Season Statistics</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="leaderboard">Leaderboard</button>
+            <button class="tab" data-tab="sessions">Sessions</button>
+            <button class="tab" data-tab="players">Players</button>
+        </nav>
+
+        <!-- Leaderboard Tab -->
+        <div id="leaderboard" class="section">
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <div class="stat-value">13</div>
+                    <div class="stat-label">Sessions Played</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Total Players</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$310</div>
+                    <div class="stat-label">Total Money In</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">$18.25</div>
+                    <div class="stat-label">Biggest Win</div>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">All-Time Standings</h2>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Sessions</th>
+                            <th>Invested</th>
+                            <th>Profit/Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessions" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Session History</h2>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="sessions-grid" id="sessions-grid">
+            </div>
+        </div>
+
+        <!-- Players Tab -->
+        <div id="players" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Player Profiles</h2>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Sessions</th>
+                            <th>Win Rate</th>
+                            <th>Best Session</th>
+                            <th>Worst Session</th>
+                            <th>Total P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="players-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>Built with ♥ for the crew</p>
+        </footer>
+    </div>
+
+    <script>
+        // Chip to dollar conversion rate (1000 chips = $5)
+        const CHIP_RATE = 0.005;
+
+        // Session data - just enter chipsIn and chipsOut, dollars are calculated automatically!
+        const sessionsRaw = [
+            {
+                id: 1,
+                date: '01/26',
+                players: [
+                    { name: 'henry', chipsIn: 4000, chipsOut: 0 },
+                    { name: 'ricky', chipsIn: 2000, chipsOut: 3462 },
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 3202 },
+                    { name: 'frankie', chipsIn: 1000, chipsOut: 1335 }
+                ]
+            },
+            {
+                id: 2,
+                date: '01/29',
+                players: [
+                    { name: 'henry', chipsIn: 1000, chipsOut: 3000 },
+                    { name: 'andrew', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 0 }
+                ]
+            },
+            {
+                id: 3,
+                date: '01/30',
+                players: [
+                    { name: 'henry', chipsIn: 1000, chipsOut: 2000 },
+                    { name: 'travis', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 2000 },
+                    { name: 'devin', chipsIn: 1000, chipsOut: 0 }
+                ]
+            },
+            {
+                id: 4,
+                date: '01/30',
+                players: [
+                    { name: 'henry', chipsIn: 1000, chipsOut: 2000 },
+                    { name: 'andrew', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'kenny', chipsIn: 2000, chipsOut: 2000 }
+                ]
+            },
+            {
+                id: 5,
+                date: '01/30',
+                players: [
+                    { name: 'henry', chipsIn: 1000, chipsOut: 1445 },
+                    { name: 'devin', chipsIn: 1000, chipsOut: 2205 },
+                    { name: 'frankie', chipsIn: 2000, chipsOut: 1330 },
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 0 }
+                ]
+            },
+            {
+                id: 6,
+                date: '01/31',
+                players: [
+                    { name: 'henry', chipsIn: 2000, chipsOut: 0 },
+                    { name: 'devin', chipsIn: 1000, chipsOut: 1514 },
+                    { name: 'kenny', chipsIn: 2000, chipsOut: 3486 }
+                ]
+            },
+            {
+                id: 7,
+                date: '01/31',
+                players: [
+                    { name: 'henry', chipsIn: 1000, chipsOut: 2000 },
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 0 }
+                ]
+            },
+            {
+                id: 8,
+                date: '01/31',
+                players: [
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 1635 },
+                    { name: 'henry', chipsIn: 1000, chipsOut: 365 }
+                ]
+            },
+            {
+                id: 9,
+                date: '02/01',
+                players: [
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 1460 },
+                    { name: 'ricky', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'henry', chipsIn: 1000, chipsOut: 1540 }
+                ]
+            },
+            {
+                id: 10,
+                date: '02/01',
+                players: [
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 650 },
+                    { name: 'ricky', chipsIn: 2000, chipsOut: 700 },
+                    { name: 'landon', chipsIn: 1000, chipsOut: 4650 },
+                    { name: 'henry', chipsIn: 2000, chipsOut: 0 }
+                ]
+            },
+            {
+                id: 11,
+                date: '02/01',
+                players: [
+                    { name: 'kenny', chipsIn: 2000, chipsOut: 0 },
+                    { name: 'ricky', chipsIn: 2000, chipsOut: 4090 },
+                    { name: 'landon', chipsIn: 2000, chipsOut: 0 },
+                    { name: 'henry', chipsIn: 2000, chipsOut: 3910 }
+                ]
+            },
+            {
+                id: 12,
+                date: '02/01',
+                players: [
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 850 },
+                    { name: 'ricky', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'andrew', chipsIn: 1000, chipsOut: 925 },
+                    { name: 'devin', chipsIn: 1000, chipsOut: 1075 },
+                    { name: 'henry', chipsIn: 1000, chipsOut: 2150 }
+                ]
+            },
+            {
+                id: 13,
+                date: '02/01',
+                players: [
+                    { name: 'kenny', chipsIn: 1000, chipsOut: 1235 },
+                    { name: 'henry', chipsIn: 1000, chipsOut: 1960 },
+                    { name: 'andrew', chipsIn: 1000, chipsOut: 0 },
+                    { name: 'devin', chipsIn: 1000, chipsOut: 805 }
+                ]
+            }
+        ];
+
+        // Auto-calculate dollar values from chips
+        const sessions = sessionsRaw.map(session => ({
+            ...session,
+            players: session.players.map(player => ({
+                ...player,
+                invested: player.chipsIn * CHIP_RATE,
+                final: player.chipsOut * CHIP_RATE,
+                profit: (player.chipsOut - player.chipsIn) * CHIP_RATE
+            }))
+        }));
+
+        // Calculate all-time stats
+        function calculateAllTimeStats() {
+            const playerStats = {};
+
+            sessions.forEach(session => {
+                session.players.forEach(player => {
+                    if (!playerStats[player.name]) {
+                        playerStats[player.name] = {
+                            name: player.name,
+                            sessions: 0,
+                            invested: 0,
+                            profit: 0,
+                            wins: 0,
+                            bestSession: -Infinity,
+                            worstSession: Infinity
+                        };
+                    }
+                    playerStats[player.name].sessions++;
+                    playerStats[player.name].invested += player.invested;
+                    playerStats[player.name].profit += player.profit;
+                    if (player.profit > 0) playerStats[player.name].wins++;
+                    if (player.profit > playerStats[player.name].bestSession) {
+                        playerStats[player.name].bestSession = player.profit;
+                    }
+                    if (player.profit < playerStats[player.name].worstSession) {
+                        playerStats[player.name].worstSession = player.profit;
+                    }
+                });
+            });
+
+            return Object.values(playerStats).sort((a, b) => b.profit - a.profit);
+        }
+
+        // Format money
+        function formatMoney(amount, showSign = true) {
+            const sign = amount > 0 ? '+' : '';
+            const formatted = Math.abs(amount).toFixed(2);
+            if (showSign && amount !== 0) {
+                return `${sign}$${amount >= 0 ? formatted : formatted}`;
+            }
+            return `$${formatted}`;
+        }
+
+        // Get profit class
+        function getProfitClass(amount) {
+            if (amount > 0) return 'profit';
+            if (amount < 0) return 'loss';
+            return 'neutral';
+        }
+
+        // Render leaderboard
+        function renderLeaderboard() {
+            const stats = calculateAllTimeStats();
+            const tbody = document.getElementById('leaderboard-body');
+            
+            tbody.innerHTML = stats.map((player, index) => {
+                const rankClass = index < 3 ? `rank-${index + 1}` : 'rank-other';
+                return `
+                    <tr>
+                        <td>
+                            <div class="player-cell">
+                                <div class="player-rank ${rankClass}">${index + 1}</div>
+                                <span class="player-name">${player.name}</span>
+                            </div>
+                        </td>
+                        <td><span class="sessions-badge">${player.sessions}</span></td>
+                        <td class="money">$${player.invested.toFixed(2)}</td>
+                        <td class="money ${getProfitClass(player.profit)}">${formatMoney(player.profit)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Render sessions
+        function renderSessions() {
+            const grid = document.getElementById('sessions-grid');
+            
+            grid.innerHTML = sessions.slice().reverse().map(session => {
+                const totalPot = session.players.reduce((sum, p) => sum + p.invested, 0);
+                return `
+                    <div class="session-card" data-session="${session.id}">
+                        <div class="session-header" onclick="toggleSession(${session.id})">
+                            <div>
+                                <div class="session-title">Session ${session.id}</div>
+                                <div class="session-date">${session.date} • ${session.players.length} players • $${totalPot.toFixed(2)} pot</div>
+                            </div>
+                            <div class="session-badge">
+                                <span>Paid</span>
+                                <svg class="expand-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="session-content">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Chips In</th>
+                                        <th>Chips Out</th>
+                                        <th>Invested</th>
+                                        <th>Final</th>
+                                        <th>Profit/Loss</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${session.players.map(player => `
+                                        <tr>
+                                            <td class="player-name">${player.name}</td>
+                                            <td class="chips">${player.chipsIn.toLocaleString()}</td>
+                                            <td class="chips">${player.chipsOut.toLocaleString()}</td>
+                                            <td class="money">$${player.invested.toFixed(2)}</td>
+                                            <td class="money">$${player.final.toFixed(2)}</td>
+                                            <td class="money ${getProfitClass(player.profit)}">${formatMoney(player.profit)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render players
+        function renderPlayers() {
+            const stats = calculateAllTimeStats();
+            const tbody = document.getElementById('players-body');
+            
+            tbody.innerHTML = stats.map(player => {
+                const winRate = ((player.wins / player.sessions) * 100).toFixed(0);
+                return `
+                    <tr>
+                        <td class="player-name">${player.name}</td>
+                        <td><span class="sessions-badge">${player.sessions}</span></td>
+                        <td>${winRate}%</td>
+                        <td class="money profit">${formatMoney(player.bestSession)}</td>
+                        <td class="money loss">${formatMoney(player.worstSession)}</td>
+                        <td class="money ${getProfitClass(player.profit)}">${formatMoney(player.profit)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Toggle session expansion
+        function toggleSession(id) {
+            const card = document.querySelector(`[data-session="${id}"]`);
+            card.classList.toggle('expanded');
+        }
+
+        // Tab navigation
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab).classList.remove('hidden');
+            });
+        });
+
+        // Initialize
+        renderLeaderboard();
+        renderSessions();
+        renderPlayers();
+    </script>
+</body>
+</html>
