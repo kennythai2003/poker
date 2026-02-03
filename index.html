@@ -496,19 +496,19 @@
         <div id="leaderboard" class="section">
             <div class="stats-overview">
                 <div class="stat-card">
-                    <div class="stat-value">14</div>
+                    <div class="stat-value" id="stat-sessions">0</div>
                     <div class="stat-label">Sessions Played</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">8</div>
+                    <div class="stat-value" id="stat-players">0</div>
                     <div class="stat-label">Total Players</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">$335</div>
+                    <div class="stat-value" id="stat-money">$0</div>
                     <div class="stat-label">Total Money In</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">$18.25</div>
+                    <div class="stat-value" id="stat-biggest">$0</div>
                     <div class="stat-label">Biggest Win</div>
                 </div>
             </div>
@@ -704,7 +704,7 @@
                     { name: 'devin', chipsIn: 1000, chipsOut: 805 }
                 ]
             },
-             {
+            {
                 id: 14,
                 date: '02/01',
                 players: [
@@ -758,6 +758,44 @@
             });
 
             return Object.values(playerStats).sort((a, b) => b.profit - a.profit);
+        }
+
+        // Calculate overview stats
+        function calculateOverviewStats() {
+            const playerStats = calculateAllTimeStats();
+            
+            // Total sessions
+            const totalSessions = sessions.length;
+            
+            // Total unique players
+            const totalPlayers = playerStats.length;
+            
+            // Total money in (sum of all investments)
+            const totalMoneyIn = sessions.reduce((sum, session) => {
+                return sum + session.players.reduce((pSum, player) => pSum + player.invested, 0);
+            }, 0);
+            
+            // Biggest single session win
+            let biggestWin = 0;
+            sessions.forEach(session => {
+                session.players.forEach(player => {
+                    if (player.profit > biggestWin) {
+                        biggestWin = player.profit;
+                    }
+                });
+            });
+            
+            return { totalSessions, totalPlayers, totalMoneyIn, biggestWin };
+        }
+
+        // Render overview stats
+        function renderOverviewStats() {
+            const stats = calculateOverviewStats();
+            
+            document.getElementById('stat-sessions').textContent = stats.totalSessions;
+            document.getElementById('stat-players').textContent = stats.totalPlayers;
+            document.getElementById('stat-money').textContent = `$${stats.totalMoneyIn.toFixed(0)}`;
+            document.getElementById('stat-biggest').textContent = `$${stats.biggestWin.toFixed(2)}`;
         }
 
         // Format money
@@ -889,6 +927,7 @@
         });
 
         // Initialize
+        renderOverviewStats();
         renderLeaderboard();
         renderSessions();
         renderPlayers();
